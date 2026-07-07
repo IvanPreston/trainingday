@@ -541,7 +541,7 @@ async function generatePlan() {
   var timeoutId = setTimeout(function(){ controller.abort(); }, 90000);
 
   try {
-    var resp = await fetch('/.netlify/functions/generate', {
+    var resp = await fetch('https://trainingday-server.onrender.com/generate', {
       method: 'POST',
       signal: controller.signal,
       headers: { 'Content-Type': 'application/json' },
