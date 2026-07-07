@@ -1,6 +1,9 @@
 const https = require('https');
 
 exports.handler = async function(event, context) {
+  // Увеличиваем таймаут функции до максимума
+  context.callbackWaitsForEmptyEventLoop = false;
+
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
@@ -28,7 +31,7 @@ exports.handler = async function(event, context) {
     try {
       body = JSON.parse(event.body);
     } catch(e) {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Невалидный JSON: ' + e.message }) };
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Невалидный JSON' }) };
     }
 
     const { prompt } = body;
@@ -38,16 +41,15 @@ exports.handler = async function(event, context) {
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
-      return { statusCode: 500, headers, body: JSON.stringify({ error: 'API ключ не настроен на сервере' }) };
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'API ключ не настроен' }) };
     }
 
     const requestBody = JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 3500,
+      model: 'claude-haiku-4-5',
+      max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }]
     });
 
-    // Используем встроенный https модуль Node.js вместо fetch
     const result = await new Promise((resolve, reject) => {
       const req = https.request({
         hostname: 'api.anthropic.com',
@@ -66,15 +68,16 @@ exports.handler = async function(event, context) {
           try {
             resolve({ status: res.statusCode, body: JSON.parse(data) });
           } catch(e) {
-            reject(new Error('Ошибка парсинга ответа API: ' + data.slice(0, 200)));
+            reject(new Error('Ошибка парсинга: ' + data.slice(0, 100)));
           }
         });
       });
 
       req.on('error', reject);
-      req.setTimeout(85000, () => {
+      // 9 секунд — чуть меньше лимита Netlify
+      req.setTimeout(9000, () => {
         req.destroy();
-        reject(new Error('Таймаут запроса к API'));
+        reject(new Error('Таймаут — попробуй ещё раз'));
       });
       req.write(requestBody);
       req.end();
@@ -86,7 +89,7 @@ exports.handler = async function(event, context) {
     }
 
     if (!result.body.content || !result.body.content[0]) {
-      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Пустой ответ от Claude' }) };
+      return { statusCode: 500, headers, body: JSON.stringify({ error: 'Пустой ответ' }) };
     }
 
     return {
