@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тренировка с целью</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+:root{--bg:#f5ede3;--surface:#fffaf5;--surface2:#f0e6d8;--border:#d9c4ae;--amber:#d97706;--amber-dim:#d9770615;--green:#059669;--green-dim:#05966915;--red:#dc2626;--text:#2c1f14;--text2:#6b4f38;--text3:#9c7a62;--radius:16px;--rsm:10px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;font-size:15px;line-height:1.6;}
+
+/* SETUP - removed */
+
+/* QUIZ */
+#quiz-screen{display:none;min-height:100vh;}
+.quiz-header{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 20px;position:sticky;top:0;z-index:10;}
+.quiz-progress-wrap{max-width:600px;margin:0 auto;display:flex;align-items:center;gap:14px;}
+.quiz-progress-bar{flex:1;height:6px;background:var(--surface2);border-radius:20px;overflow:hidden;}
+.quiz-progress-fill{height:100%;background:var(--amber);border-radius:20px;transition:width .4s ease;}
+.quiz-step-label{font-size:12px;font-weight:700;color:var(--text3);white-space:nowrap;}
+.quiz-body{max-width:600px;margin:0 auto;padding:32px 20px 100px;}
+.q-category{font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+.q-text{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.5px;line-height:1.25;margin-bottom:6px;}
+.q-hint{font-size:13px;color:var(--text3);margin-bottom:24px;line-height:1.5;}
+.options-grid{display:flex;flex-direction:column;gap:10px;}
+.options-grid.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.option-btn{background:var(--surface);border:2px solid var(--border);border-radius:var(--rsm);padding:14px 16px;text-align:left;cursor:pointer;font-family:inherit;font-size:14px;font-weight:500;color:var(--text);transition:all .15s;display:flex;align-items:center;gap:12px;line-height:1.3;}
+.option-btn:hover{border-color:var(--amber);background:var(--amber-dim);}
+.option-btn.selected{border-color:var(--amber);background:var(--amber-dim);color:var(--amber);font-weight:700;}
+.opt-icon{font-size:20px;flex-shrink:0;}
+.opt-sub{font-size:11px;color:var(--text3);margin-top:2px;font-weight:400;}
+.option-btn.selected .opt-sub{color:var(--amber);opacity:.8;}
+.input-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px;}
+.q-input-wrap{display:flex;flex-direction:column;gap:6px;}
+.q-input-label{font-size:12px;font-weight:600;color:var(--text3);}
+.q-input{background:var(--surface);border:2px solid var(--border);border-radius:var(--rsm);padding:14px 16px;font-size:18px;font-weight:700;color:var(--text);font-family:inherit;outline:none;transition:border-color .2s;width:100%;}
+.q-input:focus{border-color:var(--amber);}
+.multi-note{font-size:12px;color:var(--text3);margin-bottom:12px;font-style:italic;}
+.weights-grid{display:flex;flex-direction:column;gap:12px;margin-bottom:12px;}
+.weight-row{display:flex;align-items:center;gap:12px;}
+.weight-label{font-size:13px;color:var(--text2);font-weight:500;flex:1;}
+.weight-input{background:var(--surface);border:2px solid var(--border);border-radius:var(--rsm);padding:10px 14px;font-size:17px;font-weight:700;color:var(--text);font-family:inherit;outline:none;transition:border-color .2s;width:110px;text-align:center;}
+.weight-input:focus{border-color:var(--amber);}
+.skip-btn{width:100%;background:none;border:1.5px dashed var(--border);border-radius:var(--rsm);padding:12px 20px;color:var(--text3);font-size:13px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.skip-btn:hover{border-color:var(--amber);color:var(--amber);}
+.quiz-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(245,237,227,.96);backdrop-filter:blur(12px);border-top:1px solid var(--border);padding:14px 20px;z-index:10;}
+.quiz-nav-inner{max-width:600px;margin:0 auto;display:flex;gap:10px;}
+.nav-back{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rsm);padding:13px 20px;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit;transition:all .15s;flex-shrink:0;}
+.nav-back:hover{border-color:var(--amber);color:var(--amber);}
+.nav-next{flex:1;background:var(--amber);border:none;border-radius:var(--rsm);padding:13px 20px;font-size:15px;font-weight:800;color:#fff;cursor:pointer;font-family:inherit;transition:opacity .15s;}
+.nav-next:hover{opacity:.9;}
+.nav-next:disabled{opacity:.35;cursor:not-allowed;}
+
+/* LOADING */
+#loading-screen{display:none;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:40px;}
+.loading-icon{font-size:56px;margin-bottom:20px;animation:pulse 1.5s ease-in-out infinite;}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.1);opacity:.7}}
+.loading-title{font-size:24px;font-weight:800;color:var(--text);margin-bottom:8px;letter-spacing:-.5px;}
+.loading-sub{font-size:14px;color:var(--text3);max-width:300px;line-height:1.5;}
+.loading-timer{font-size:13px;color:var(--text3);margin-top:8px;}
+.loading-steps{margin-top:28px;display:flex;flex-direction:column;gap:10px;max-width:320px;width:100%;}
+.loading-step{display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:var(--rsm);padding:12px 16px;border:1px solid var(--border);font-size:13px;color:var(--text3);transition:all .4s;}
+.loading-step.done{color:var(--green);border-color:var(--green);background:var(--green-dim);}
+.loading-step.active{color:var(--amber);border-color:var(--amber);background:var(--amber-dim);}
+.step-icon{font-size:18px;flex-shrink:0;}
+
+/* RESULT */
+#result-screen{display:none;max-width:680px;margin:0 auto;padding:24px 16px 60px;}
+.result-hero{background:var(--surface);border-radius:var(--radius);padding:28px;margin-bottom:16px;border:1px solid var(--border);text-align:center;}
+.result-name{font-size:26px;font-weight:900;color:var(--text);letter-spacing:-.5px;margin-bottom:4px;}
+.result-greeting{font-size:13px;color:var(--text3);margin-bottom:16px;}
+.result-stats{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.result-stat{background:var(--surface2);border-radius:var(--rsm);padding:10px 16px;text-align:center;border:1px solid var(--border);}
+.rs-val{font-size:20px;font-weight:800;color:var(--amber);}
+.rs-lbl{font-size:11px;color:var(--text3);margin-top:2px;}
+.result-card{background:var(--surface);border-radius:var(--radius);padding:22px;margin-bottom:14px;border:1px solid var(--border);}
+.rc-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.rc-content{font-size:14px;color:var(--text);line-height:1.6;}
+.error-box{background:#fef2f2;border:1px solid #fca5a5;border-radius:var(--rsm);padding:16px;font-size:13px;color:var(--red);margin-bottom:16px;line-height:1.5;display:none;}
+.result-download{background:var(--amber);color:#fff;border:none;border-radius:var(--rsm);padding:16px 24px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;width:100%;margin-top:8px;transition:opacity .15s;}
+.result-download:hover{opacity:.9;}
+.result-restart{background:none;border:1px solid var(--border);border-radius:var(--rsm);padding:12px 24px;font-size:14px;font-weight:600;color:var(--text3);cursor:pointer;font-family:inherit;width:100%;margin-top:10px;transition:all .15s;}
+.result-restart:hover{border-color:var(--amber);color:var(--amber);}
+
+/* RESULT SECTIONS */
+.prog-day{background:var(--surface2);border-radius:var(--rsm);padding:14px;margin-bottom:10px;border:1px solid var(--border);}
+.prog-day-title{font-size:14px;font-weight:800;color:var(--amber);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.prog-day-title.rest{color:var(--text3);}
+.prog-exercises{display:flex;flex-direction:column;gap:8px;}
+.prog-ex{background:var(--surface);border-radius:8px;padding:10px 12px;border:1px solid var(--border);}
+.prog-ex-name{font-size:14px;font-weight:600;color:var(--text);}
+.prog-ex-params{font-size:12px;color:var(--amber);font-weight:600;margin-top:2px;}
+.prog-note{font-size:13px;color:var(--text3);padding:4px 0;font-style:italic;}
+.macros-block{margin-bottom:16px;}
+.macro-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:8px;margin-bottom:8px;border:1px solid var(--border);}
+.macro-label{font-size:15px;color:var(--amber);font-weight:800;}
+.macro-val{font-size:14px;font-weight:500;color:var(--text);}
+.tips-block{border-top:1px solid var(--border);padding-top:14px;}
+.tips-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;}
+.nutr-tip{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border);}
+.nutr-tip:last-child{border-bottom:none;}
+.nutr-tip-num{width:26px;height:26px;border-radius:50%;background:var(--amber);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.nutr-tip-text{font-size:14px;color:var(--text);line-height:1.6;flex:1;}
+.tip-row{padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;color:var(--text);line-height:1.5;}
+.tip-row:last-child{border-bottom:none;}
+.progress-month{background:var(--surface2);border-radius:var(--rsm);padding:12px 14px;margin-bottom:8px;border-left:3px solid var(--amber);}
+.pm-label{font-size:13px;font-weight:700;color:var(--amber);margin-bottom:4px;}
+.pm-text{font-size:13px;color:var(--text2);line-height:1.5;}
+.main-rule{font-size:16px;font-weight:700;color:var(--text);line-height:1.6;padding:16px;background:var(--amber-dim);border-radius:var(--rsm);border-left:4px solid var(--amber);}
+
+/* Прогрессия */
+.prog-step{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border);}
+.prog-step:last-child{border-bottom:none;}
+.prog-step-num{width:32px;height:32px;border-radius:50%;background:var(--amber);color:#fff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.prog-step-body{flex:1;}
+.prog-step-label{font-size:12px;font-weight:700;color:var(--amber);margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px;}
+.prog-step-text{font-size:14px;color:var(--text);line-height:1.55;}
+
+/* Разгрузка и смена программы */
+.deload-row{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border);}
+.deload-row:last-child{border-bottom:none;}
+.deload-icon{font-size:22px;flex-shrink:0;width:32px;text-align:center;}
+.deload-body{flex:1;}
+.deload-label{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.deload-text{font-size:14px;color:var(--text);line-height:1.55;}
+</style>
+</head>
+<body>
+
+<div id="setup-screen" style="display:none"></div>
+
+<div id="quiz-screen">
+  <div class="quiz-header">
+    <div class="quiz-progress-wrap">
+      <div class="quiz-progress-bar"><div class="quiz-progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <div class="quiz-step-label" id="step-label">1 из 17</div>
+    </div>
+  </div>
+  <div class="quiz-body" id="quiz-body"></div>
+  <div class="quiz-nav">
+    <div class="quiz-nav-inner">
+      <button class="nav-back" id="btn-back" onclick="prevStep()">← Назад</button>
+      <button class="nav-next" id="btn-next" onclick="nextStep()">Далее →</button>
+    </div>
+  </div>
+</div>
+
+<div id="loading-screen">
+  <div class="loading-icon">🤖</div>
+  <div class="loading-title">Составляю твою программу</div>
+  <div class="loading-sub">Claude анализирует твои ответы и создаёт персональный план</div>
+  <div class="loading-timer" id="loading-timer">0 сек...</div>
+  <div class="loading-steps">
+    <div class="loading-step active" id="lst-1"><span class="step-icon">📋</span>Анализирую параметры тела и цель</div>
+    <div class="loading-step" id="lst-2"><span class="step-icon">💪</span>Подбираю упражнения под оборудование</div>
+    <div class="loading-step" id="lst-3"><span class="step-icon">🍽️</span>Рассчитываю питание и калории</div>
+    <div class="loading-step" id="lst-4"><span class="step-icon">✅</span>Формирую финальный план</div>
+  </div>
+</div>
+
+<div id="result-screen">
+  <div class="result-hero">
+    <div class="result-name" id="res-name"></div>
+    <div class="result-greeting">Твоя персональная программа готова 🎯</div>
+    <div class="result-stats" id="res-stats"></div>
+  </div>
+  <div class="error-box" id="error-box"></div>
+  <div id="result-cards"></div>
+  <button class="result-download" onclick="downloadTracker()">📥 Скачать трекер с программой</button>
+  <button class="result-restart" onclick="location.reload()">← Пройти опрос заново</button>
+</div>
+
+<script>
+var API_KEY = ''; // ключ на сервере
+var answers = {};
+var currentStep = 0;
+var generatedPlan = null;
+
+var QUESTIONS = [
+  { id:'name', category:'О тебе', type:'input_single', text:'Как тебя зовут?', hint:'Имя будет в твоей персональной программе', inputs:[{key:'name',label:'Имя',placeholder:'Иван',type:'text'}] },
+  { id:'body', category:'О тебе', type:'input_multi', text:'Рост и вес', hint:'Нужно для расчёта калорий и подбора нагрузки', inputs:[{key:'height',label:'Рост (см)',placeholder:'178',type:'number'},{key:'weight',label:'Вес (кг)',placeholder:'85',type:'number'}] },
+  { id:'age_sex', category:'О тебе', type:'input_multi', text:'Возраст и пол', hint:'Влияет на гормональный фон и восстановление', inputs:[{key:'age',label:'Возраст',placeholder:'35',type:'number'},{key:'sex',label:'Пол (М/Ж)',placeholder:'М',type:'text'}] },
+  { id:'goal', category:'Твоя цель', type:'single', text:'Главная цель', hint:'Выбери одну — она определяет всю программу',
+    options:[
+      {icon:'🔥',label:'Похудеть',sub:'Убрать жир, снизить вес',value:'fat_loss'},
+      {icon:'💪',label:'Набрать мышцы',sub:'Увеличить мышечную массу',value:'muscle_gain'},
+      {icon:'⚡',label:'Рельеф',sub:'Убрать жир, сохранить мышцы',value:'recomp'},
+      {icon:'🏃',label:'Выносливость',sub:'Бег, плавание, здоровье сердца',value:'endurance'},
+      {icon:'🧘',label:'Общая форма',sub:'Активность, энергия, самочувствие',value:'general'}
+    ]
+  },
+  { id:'target_weight', category:'Твоя цель', type:'input_single', optional:true, text:'Желаемый вес (кг)', hint:'Примерно. Пропусти если цель не связана с весом', inputs:[{key:'target_weight',label:'Целевой вес (кг)',placeholder:'75',type:'number'}] },
+  { id:'timeline', category:'Твоя цель', type:'single', text:'За какой срок хочешь результат?',
+    options:[
+      {icon:'⚡',label:'1 месяц',sub:'Быстрый старт',value:'1m'},
+      {icon:'📅',label:'3 месяца',sub:'Реальный результат',value:'3m'},
+      {icon:'🗓️',label:'6 месяцев',sub:'Глубокая трансформация',value:'6m'},
+      {icon:'🏆',label:'Образ жизни',sub:'Без дедлайна',value:'lifestyle'}
+    ]
+  },
+  { id:'experience', category:'Опыт', type:'single', text:'Опыт тренировок',
+    options:[
+      {icon:'🌱',label:'Новичок',sub:'Почти не тренировался',value:'beginner'},
+      {icon:'📈',label:'До года',sub:'Тренируюсь меньше года',value:'novice'},
+      {icon:'💪',label:'1–3 года',sub:'Есть база',value:'intermediate'},
+      {icon:'🏆',label:'Больше 3 лет',sub:'Опытный',value:'advanced'}
+    ]
+  },
+  { id:'location', category:'Условия', type:'single', text:'Где будешь тренироваться?',
+    options:[
+      {icon:'🏋️',label:'Полноценный зал',sub:'Штанги, тренажёры, кардио',value:'full_gym'},
+      {icon:'🔧',label:'Базовый зал',sub:'Гантели, часть тренажёров',value:'basic_gym'},
+      {icon:'🏠',label:'Дома',sub:'Без оборудования или минимум',value:'home'},
+      {icon:'🌳',label:'Улица',sub:'Турник, брусья, бег',value:'outdoor'},
+      {icon:'🔀',label:'Комбинирую',sub:'Зал + дом или зал + улица',value:'mixed'}
+    ]
+  },
+  { id:'pool', category:'Условия', type:'single', text:'Есть доступ к бассейну?',
+    options:[
+      {icon:'🏊',label:'Да, плаваю хорошо',sub:'Кроль, брасс',value:'yes_good'},
+      {icon:'🌊',label:'Да, плаваю немного',sub:'Брасс или на спине',value:'yes_basic'},
+      {icon:'❌',label:'Нет бассейна',value:'no'}
+    ]
+  },
+  { id:'days', category:'Условия', type:'single', text:'Сколько дней в неделю тренироваться?', twoCol:true,
+    options:[
+      {icon:'2️⃣',label:'2 дня',sub:'Минимум, но стабильно',value:2},
+      {icon:'3️⃣',label:'3 дня',sub:'Оптимально для большинства',value:3},
+      {icon:'4️⃣',label:'4 дня',sub:'Хороший прогресс',value:4},
+      {icon:'5️⃣',label:'5 дней',sub:'Интенсивный режим',value:5}
+    ]
+  },
+  { id:'duration', category:'Условия', type:'single', text:'Сколько времени на тренировку?', twoCol:true,
+    options:[
+      {icon:'⚡',label:'30–45 мин',sub:'Коротко и интенсивно',value:45},
+      {icon:'⏱️',label:'45–60 мин',sub:'Стандартная',value:60},
+      {icon:'🕐',label:'60–90 мин',sub:'Полноценная сессия',value:90},
+      {icon:'🕑',label:'90+ мин',sub:'Много времени',value:120}
+    ]
+  },
+  { id:'limitations', category:'Здоровье', type:'multi', text:'Есть ли ограничения или травмы?', hint:'Выбери всё что есть',
+    options:[
+      {icon:'✅',label:'Всё в порядке',value:'none'},
+      {icon:'🦴',label:'Проблемы со спиной',value:'back'},
+      {icon:'🦵',label:'Проблемы с коленями',value:'knees'},
+      {icon:'💪',label:'Проблемы с плечами',value:'shoulders'},
+      {icon:'🫀',label:'Сердечно-сосудистые',value:'cardio_health'},
+      {icon:'⚠️',label:'Другое',value:'other'}
+    ]
+  },
+  { id:'weights', category:'Твои веса', type:'input_weights', optional:true,
+    text:'Рабочие веса на упражнениях',
+    hint:'Укажи если знаешь — Claude подберёт точные нагрузки. Пропусти если не уверен.',
+    inputs:[
+      {key:'w_bench',label:'Жим лёжа (кг)',placeholder:'60'},
+      {key:'w_row',label:'Тяга блока / гантели (кг)',placeholder:'50'},
+      {key:'w_shoulder',label:'Жим плеч (кг)',placeholder:'15'},
+      {key:'w_legs',label:'Присед / жим ногами (кг)',placeholder:'80'},
+      {key:'w_cardio',label:'Бег — комфортная скорость (км/ч)',placeholder:'9'}
+    ]
+  },
+  { id:'nutrition', category:'Образ жизни', type:'single', text:'Как питаешься сейчас?',
+    options:[
+      {icon:'📊',label:'Считаю калории',sub:'Слежу за БЖУ осознанно',value:'tracking'},
+      {icon:'🥗',label:'Стараюсь есть правильно',sub:'Без точного счёта',value:'clean'},
+      {icon:'🍕',label:'Питаюсь как придётся',sub:'Без системы',value:'random'},
+      {icon:'🚫',label:'На диете / ем мало',sub:'Жёсткие ограничения',value:'restriction'}
+    ]
+  },
+  { id:'sleep', category:'Образ жизни', type:'single', text:'Сколько спишь в среднем?', twoCol:true,
+    options:[
+      {icon:'😴',label:'Меньше 6 часов',sub:'Постоянно не высыпаюсь',value:'poor'},
+      {icon:'😐',label:'6–7 часов',sub:'Иногда не хватает',value:'ok'},
+      {icon:'😊',label:'7–8 часов',sub:'Сплю хорошо',value:'good'},
+      {icon:'💤',label:'Больше 8 часов',value:'great'}
+    ]
+  },
+  { id:'stress', category:'Образ жизни', type:'single', text:'Уровень стресса в жизни?', twoCol:true,
+    options:[
+      {icon:'😌',label:'Низкий',sub:'Спокойная жизнь',value:'low'},
+      {icon:'😐',label:'Умеренный',sub:'Обычные нагрузки',value:'moderate'},
+      {icon:'😰',label:'Высокий',sub:'Много работы',value:'high'},
+      {icon:'🔥',label:'Очень высокий',sub:'Хронический стресс',value:'very_high'}
+    ]
+  },
+  { id:'priority', category:'Финал', type:'multi', text:'Что важнее всего для тебя?', hint:'Выбери до 3 пунктов',
+    options:[
+      {icon:'⚡',label:'Быстрый результат',value:'fast'},
+      {icon:'🦺',label:'Безопасность для суставов',value:'safe'},
+      {icon:'⏱️',label:'Экономия времени',value:'time'},
+      {icon:'🧠',label:'Понять принципы',value:'education'},
+      {icon:'🎯',label:'Чёткий план',value:'structure'},
+      {icon:'📈',label:'Долгосрочный прогресс',value:'longterm'}
+    ]
+  }
+];
+
+// SETUP
+function startQuiz() {
+  document.getElementById('quiz-screen').style.display = 'block';
+  renderStep(0);
+}
+
+// QUIZ
+function renderStep(idx) {
+  currentStep = idx;
+  var total = QUESTIONS.length;
+  document.getElementById('progress-fill').style.width = ((idx/total)*100).toFixed(0)+'%';
+  document.getElementById('step-label').textContent = (idx+1)+' из '+total;
+  document.getElementById('btn-back').style.visibility = idx===0?'hidden':'visible';
+  var nextBtn = document.getElementById('btn-next');
+  nextBtn.textContent = idx===total-1 ? '✨ Получить программу' : 'Далее →';
+  document.getElementById('quiz-body').innerHTML = buildQuestion(QUESTIONS[idx]);
+  updateNextBtn();
+  window.scrollTo(0,0);
+}
+
+function buildQuestion(q) {
+  var inner = '';
+  if (q.type === 'single') {
+    var cls = q.twoCol ? 'two-col' : '';
+    inner = '<div class="options-grid '+cls+'">';
+    q.options.forEach(function(o,oi) {
+      var sel = answers[q.id]===o.value ? 'selected' : '';
+      inner += '<button class="option-btn '+sel+'" data-qid="'+q.id+'" data-oidx="'+oi+'" onclick="pickSingle(this)">'
+        +'<span class="opt-icon">'+o.icon+'</span>'
+        +'<div><div>'+o.label+'</div>'+(o.sub?'<div class="opt-sub">'+o.sub+'</div>':'')+'</div>'
+        +'</button>';
+    });
+    inner += '</div>';
+  } else if (q.type === 'multi') {
+    var cur = answers[q.id] || [];
+    inner = '<div class="multi-note">Можно выбрать несколько</div><div class="options-grid">';
+    q.options.forEach(function(o,oi) {
+      var sel = cur.indexOf(o.value)>=0 ? 'selected' : '';
+      inner += '<button class="option-btn '+sel+'" data-qid="'+q.id+'" data-oidx="'+oi+'" onclick="pickMulti(this)">'
+        +'<span class="opt-icon">'+o.icon+'</span>'
+        +'<div>'+o.label+'</div>'
+        +'</button>';
+    });
+    inner += '</div>';
+  } else if (q.type === 'input_multi') {
+    inner = '<div class="input-row">';
+    q.inputs.forEach(function(inp) {
+      var val = answers[inp.key] || '';
+      inner += '<div class="q-input-wrap"><div class="q-input-label">'+inp.label+'</div>'
+        +'<input class="q-input" type="'+inp.type+'" value="'+val+'" placeholder="'+inp.placeholder+'"'
+        +' oninput="answers[\''+inp.key+'\']=this.value;updateNextBtn()"></div>';
+    });
+    inner += '</div>';
+  } else if (q.type === 'input_single') {
+    var inp = q.inputs[0];
+    var val = answers[inp.key] || '';
+    inner = '<div class="q-input-wrap"><div class="q-input-label">'+inp.label+'</div>'
+      +'<input class="q-input" type="'+inp.type+'" value="'+val+'" placeholder="'+inp.placeholder+'"'
+      +' oninput="answers[\''+inp.key+'\']=this.value;updateNextBtn()" style="max-width:280px"></div>';
+  } else if (q.type === 'input_weights') {
+    inner = '<div class="weights-grid">';
+    q.inputs.forEach(function(inp) {
+      var val = answers[inp.key] || '';
+      inner += '<div class="weight-row">'
+        +'<div class="weight-label">'+inp.label+'</div>'
+        +'<input class="weight-input" type="number" value="'+val+'" placeholder="'+inp.placeholder+'"'
+        +' oninput="answers[\''+inp.key+'\']=this.value"></div>';
+    });
+    inner += '</div>';
+    inner += '<button class="skip-btn" onclick="skipWeights()">Пропустить — Claude подберёт веса сам →</button>';
+  }
+  return '<div class="q-category">'+q.category+'</div>'
+    +'<div class="q-text">'+q.text+'</div>'
+    +(q.hint?'<div class="q-hint">'+q.hint+'</div>':'')
+    +inner;
+}
+
+function pickSingle(el) {
+  var qid = el.dataset.qid;
+  var oidx = parseInt(el.dataset.oidx);
+  var q = QUESTIONS.find(function(q){return q.id===qid;});
+  answers[qid] = q.options[oidx].value;
+  el.closest('.options-grid').querySelectorAll('.option-btn').forEach(function(b){b.classList.remove('selected');});
+  el.classList.add('selected');
+  updateNextBtn();
+  setTimeout(function(){ if(currentStep < QUESTIONS.length-1) nextStep(); }, 280);
+}
+
+function pickMulti(el) {
+  var qid = el.dataset.qid;
+  var oidx = parseInt(el.dataset.oidx);
+  var q = QUESTIONS.find(function(q){return q.id===qid;});
+  var val = q.options[oidx].value;
+  if (!answers[qid]) answers[qid] = [];
+  var arr = answers[qid];
+  if (val === 'none') {
+    answers[qid] = arr.indexOf('none')>=0 ? [] : ['none'];
+    el.closest('.options-grid').querySelectorAll('.option-btn').forEach(function(b){b.classList.remove('selected');});
+    if (answers[qid].length) el.classList.add('selected');
+  } else {
+    answers[qid] = arr.filter(function(v){return v!=='none';});
+    if (arr.indexOf(val)>=0) {
+      answers[qid] = answers[qid].filter(function(v){return v!==val;});
+      el.classList.remove('selected');
+    } else {
+      answers[qid].push(val);
+      el.classList.add('selected');
+    }
+    el.closest('.options-grid').querySelectorAll('.option-btn').forEach(function(b){
+      var bidx = parseInt(b.dataset.oidx);
+      if (q.options[bidx] && q.options[bidx].value==='none') b.classList.remove('selected');
+    });
+  }
+  updateNextBtn();
+}
+
+function skipWeights() {
+  ['w_bench','w_row','w_shoulder','w_legs','w_cardio'].forEach(function(k){answers[k]='';});
+  nextStep();
+}
+
+function updateNextBtn() {
+  var q = QUESTIONS[currentStep];
+  var valid = false;
+  if (q.optional) { valid = true; }
+  else if (q.type==='single') { valid = answers[q.id]!==undefined; }
+  else if (q.type==='multi') { valid = (answers[q.id]||[]).length>0; }
+  else if (q.type==='input_multi') { valid = q.inputs.every(function(i){return answers[i.key]&&answers[i.key]!==''}); }
+  else if (q.type==='input_single') { valid = !!(answers[q.inputs[0].key]); }
+  else if (q.type==='input_weights') { valid = true; }
+  document.getElementById('btn-next').disabled = !valid;
+}
+
+function nextStep() {
+  if (currentStep < QUESTIONS.length-1) renderStep(currentStep+1);
+  else generatePlan();
+}
+function prevStep() { if (currentStep>0) renderStep(currentStep-1); }
+
+// GENERATE
+function buildPrompt() {
+  var a = answers;
+  var goalMap = {fat_loss:'жиросжигание и снижение веса',muscle_gain:'набор мышечной массы',recomp:'рельеф — жиросжигание с сохранением мышц',endurance:'развитие выносливости',general:'общая физическая форма'};
+  var locMap = {full_gym:'полноценный зал (штанги, все тренажёры, кардио)',basic_gym:'базовый зал (гантели, часть тренажёров)',home:'дома без оборудования',outdoor:'улица (турник, брусья, бег)',mixed:'зал + дом'};
+  var expMap = {beginner:'новичок',novice:'до года тренировок',intermediate:'1–3 года, есть база',advanced:'больше 3 лет'};
+  var poolMap = {yes_good:'есть бассейн, плавает хорошо',yes_basic:'есть бассейн, плавает немного',no:'бассейна нет'};
+  var lims = (a.limitations||['none']).join(', ');
+  var wb = a.w_bench ? a.w_bench+' кг' : 'не указан';
+  var wr = a.w_row ? a.w_row+' кг' : 'не указан';
+  var ws = a.w_shoulder ? a.w_shoulder+' кг' : 'не указан';
+  var wl = a.w_legs ? a.w_legs+' кг' : 'не указан';
+  var wc = a.w_cardio ? a.w_cardio+' км/ч' : 'не указана';
+
+  return 'Ты опытный фитнес-тренер. Составь персональный план.\n\n'
+    +'ДАННЫЕ:\n'
+    +'Имя: '+(a.name||'Пользователь')+'\n'
+    +'Пол: '+(a.sex||'не указан')+', Возраст: '+a.age+' лет\n'
+    +'Рост: '+a.height+' см, Вес: '+a.weight+' кг\n'
+    +'Целевой вес: '+(a.target_weight ? a.target_weight+' кг' : 'не указан')+'\n'
+    +'Цель: '+(goalMap[a.goal]||a.goal)+'\n'
+    +'Срок: '+a.timeline+'\n'
+    +'Опыт: '+(expMap[a.experience]||a.experience)+'\n'
+    +'Место: '+(locMap[a.location]||a.location)+'\n'
+    +'Бассейн: '+(poolMap[a.pool]||a.pool)+'\n'
+    +'Дней/неделю: '+a.days+', Время: '+a.duration+' мин\n'
+    +'Ограничения: '+lims+'\n'
+    +'Рабочие веса — жим лёжа: '+wb+', тяга: '+wr+', плечи: '+ws+', ноги: '+wl+', бег: '+wc+'\n'
+    +'Питание: '+a.nutrition+', Сон: '+a.sleep+', Стресс: '+a.stress+'\n\n'
+    +'ВАЖНЫЕ ПРАВИЛА ДЛЯ ОТВЕТА:\n'
+    +'- Если пользователь указал рабочие веса — используй именно их. Для 10-12 повторений рабочий вес примерно 70% от максимума.\n'
+    +'- Если веса не указаны — подбери реалистичные для уровня опыта. Новичок: жим 40-50 кг, тяга 30-40 кг.\n'
+    +'- Разведение гантелей всегда легче жима — максимум 30-40% от веса жима\n'
+    +'- Становую тягу НЕ назначай новичкам и людям с проблемами спины\n'
+    +'- Для кардио всегда указывай скорость: ходьба 5-6 км/ч, лёгкий бег 8-9 км/ч, средний 10-11 км/ч\n'
+    +'- НЕ используй термины: 1ПМ, ПМ, TDEE, BMR. Пиши простыми словами\n'
+    +'- НЕ используй markdown: никаких звёздочек **, решёток ##, подчёркиваний\n'
+    +'- Упражнение пиши так: "Жим штанги лёжа — 4 подхода по 10 раз — вес 70 кг"\n'
+    +'- Дни пиши так: "Понедельник:" без скобок\n'
+    +'- Пиши как умный тренер-друг, не как учебник\n\n'
+    +'Ответь строго в формате с разделителями:\n\n'
+    +'===АНАЛИЗ===\n'
+    +'Анализ ситуации: что мешает сейчас, главный рычаг для результата (3-4 предложения)\n\n'
+    +'===ПРОГРАММА===\n'
+    +'Недельная программа. Каждый день с новой строки начинай с названия дня со двоеточием.\n'
+    +'Для каждого тренировочного дня перечисли упражнения. Дни отдыха тоже укажи.\n\n'
+    +'===ПИТАНИЕ===\n'
+    +'Калории: X ккал\n'
+    +'Белок: X г\n'
+    +'Жиры: X г\n'
+    +'Углеводы: X г\n'
+    +'Затем ровно 3 совета. Каждый совет строго в формате:\n'
+    +'СОВЕТ: [текст совета одной строкой без переносов]\n'
+    +'Пример: СОВЕТ: Ешь белок в каждый приём пищи — это защитит мышцы при дефиците калорий.\n\n'
+    +'===СОН_И_ВОССТАНОВЛЕНИЕ===\n'
+    +'2-3 конкретных совета по сну и восстановлению.\n\n'
+    +'===ПРОГРЕСС===\n'
+    +'Напиши ровно 3 строки без пропусков. Каждая строка начинается с маркера времени:\n'
+    +'1 МЕСЯЦ: [одно предложение что изменится]\n'
+    +'3 МЕСЯЦА: [одно предложение что изменится]\n'
+    +'6 МЕСЯЦЕВ: [одно предложение что изменится]\n\n'
+    +'===ГЛАВНОЕ_ПРАВИЛО===\n'
+    +'Одно главное правило именно для этого человека.\n\n'
+    +'===ПРОГРЕССИЯ===\n'
+    +'Напиши конкретный план прогрессии под уровень опыта пользователя. Строго в формате:\n'
+    +'ШАГ: [описание одной строкой без переносов]\n'
+    +'Напиши ровно 4 шага. Первый — как прогрессировать в первые 4 недели. Второй — недели 5–8. Третий — недели 9–12. Четвёртый — после 3 месяцев.\n\n'
+    +'===РАЗГРУЗКА===\n'
+    +'Напиши конкретный план разгрузочных недель. Строго в формате:\n'
+    +'КОГДА: [одна строка когда делать разгрузку]\n'
+    +'КАК: [одна строка что конкретно делать на разгрузочной неделе]\n'
+    +'ПРИЗНАКИ: [одна строка как понять что пора разгружаться]\n\n'
+    +'===СМЕНА_ПРОГРАММЫ===\n'
+    +'Напиши план когда и как менять программу. Строго в формате:\n'
+    +'ПЕРИОД: [через сколько недель менять]\n'
+    +'ЧТО_МЕНЯТЬ: [что именно менять в программе]\n'
+    +'ПРИМЕР: [конкретный пример замены упражнения или перестановки дней]\n\n'
+    +'ВАЖНО про бассейн: бассейн всегда ПОСЛЕ зала если в один день, или в отдельный день. Никогда до силовой тренировки и никогда между упражнениями. Это правило для любого плана.';
+}
+
+async function generatePlan() {
+  document.getElementById('quiz-screen').style.display = 'none';
+  var ls = document.getElementById('loading-screen');
+  ls.style.display = 'flex';
+  ls.style.flexDirection = 'column';
+
+  var elapsed = 0;
+  var steps = ['lst-1','lst-2','lst-3','lst-4'];
+  var ticker = setInterval(function() {
+    elapsed++;
+    var tel = document.getElementById('loading-timer');
+    if (tel) tel.textContent = elapsed+' сек...';
+    var si = Math.min(Math.floor(elapsed/7), steps.length-1);
+    steps.forEach(function(s,i) {
+      var el = document.getElementById(s);
+      if (!el) return;
+      el.classList.remove('active','done');
+      if (i<si) el.classList.add('done');
+      else if (i===si) el.classList.add('active');
+    });
+  }, 1000);
+
+  var controller = new AbortController();
+  var timeoutId = setTimeout(function(){ controller.abort(); }, 90000);
+
+  try {
+    var resp = await fetch('/.netlify/functions/generate', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: buildPrompt() })
+    });
+    clearTimeout(timeoutId);
+    clearInterval(ticker);
+    steps.forEach(function(s){
+      var el=document.getElementById(s);
+      if(el){el.classList.remove('active');el.classList.add('done');}
+    });
+    if (!resp.ok) {
+      var errData = await resp.json();
+      throw new Error(errData.error || 'Ошибка сервера '+resp.status);
+    }
+    var data = await resp.json();
+    if (!data.content) throw new Error('Пустой ответ от сервера');
+    generatedPlan = parseResponse(data.content);
+    await new Promise(function(r){setTimeout(r,400);});
+    showResult();
+  } catch(e) {
+    clearTimeout(timeoutId);
+    clearInterval(ticker);
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('result-screen').style.display = 'block';
+    var eb = document.getElementById('error-box');
+    eb.style.display = 'block';
+    if (e.name==='AbortError') {
+      eb.textContent = 'Превышено время ожидания (90 сек). Попробуй ещё раз.';
+    } else {
+      eb.textContent = 'Ошибка: '+e.message+'. Проверь API ключ и баланс на console.anthropic.com';
+    }
+    eb.innerHTML += '<br><br><button onclick="location.reload()" style="background:#d97706;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-weight:700;cursor:pointer;font-family:inherit">← Попробовать снова</button>';
+  }
+}
+
+function parseResponse(text) {
+  var sections = {};
+  var markers = ['АНАЛИЗ','ПРОГРАММА','ПИТАНИЕ','СОН_И_ВОССТАНОВЛЕНИЕ','ПРОГРЕСС','ГЛАВНОЕ_ПРАВИЛО','ПРОГРЕССИЯ','РАЗГРУЗКА','СМЕНА_ПРОГРАММЫ'];
+  markers.forEach(function(m, i) {
+    var start = text.indexOf('==='+m+'===');
+    if (start===-1) return;
+    var contentStart = start + m.length + 6;
+    var nextPositions = [];
+    markers.slice(i+1).forEach(function(nm){
+      var p = text.indexOf('==='+nm+'===');
+      if (p > start) nextPositions.push(p);
+    });
+    var end = nextPositions.length ? Math.min.apply(null,nextPositions) : text.length;
+    sections[m] = text.slice(contentStart, end).trim();
+  });
+  return sections;
+}
+
+function cleanText(t) {
+  return t.replace(/\*\*(.*?)\*\*/g,'$1').replace(/\*(.*?)\*/g,'$1').replace(/#{1,6}\s/g,'').replace(/`([^`]+)`/g,'$1').trim();
+}
+
+function formatSection(key, raw) {
+  var text = cleanText(raw);
+  var lines = text.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
+
+  if (key === 'ПРОГРАММА') {
+    var html = '';
+    var dayTitle = '';
+    var dayBuf = [];
+    var inDay = false;
+
+    function isDay(l) {
+      return /^(понедельник|вторник|среда|четверг|пятница|суббота|воскресенье|отдых)/i.test(l);
+    }
+    function isExercise(l) {
+      return l.indexOf('—')>=0 || l.indexOf(' - ')>=0 || /\d+\s*(подход|раз|мин|км)/i.test(l);
+    }
+    function flushDay() {
+      if (!dayTitle) return;
+      var isRest = /отдых/i.test(dayTitle);
+      html += '<div class="prog-day"><div class="prog-day-title'+(isRest?' rest':'')+'">'+( isRest?'😴':'💪')+' '+dayTitle+'</div>';
+      if (dayBuf.length) {
+        html += '<div class="prog-exercises">';
+        dayBuf.forEach(function(ex) {
+          if (isExercise(ex)) {
+            var sep = ex.indexOf('—')>=0 ? '—' : ' - ';
+            var parts = ex.split(sep).map(function(p){return p.trim();}).filter(Boolean);
+            html += '<div class="prog-ex"><div class="prog-ex-name">'+parts[0]+'</div>';
+            if (parts.length>1) html += '<div class="prog-ex-params">'+parts.slice(1).join(' · ')+'</div>';
+            html += '</div>';
+          } else {
+            html += '<div class="prog-note">'+ex+'</div>';
+          }
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+
+    lines.forEach(function(line) {
+      if (isDay(line)) {
+        flushDay();
+        dayTitle = line.replace(/:$/,'').trim()+':';
+        dayBuf = [];
+        inDay = true;
+      } else if (inDay) {
+        dayBuf.push(line);
+      } else {
+        html += '<div class="prog-note">'+line+'</div>';
+      }
+    });
+    flushDay();
+    return html || '<div class="prog-note">'+text+'</div>';
+  }
+
+  if (key === 'ПИТАНИЕ') {
+    var html = '<div class="macros-block">';
+    var tips = [];
+    lines.forEach(function(line) {
+      var isMacro = /^(калории|белок|жиры|жир|углеводы|углевод)/i.test(line.trim()) && /\d/.test(line);
+      var isTip = /^совет[:\s]/i.test(line.trim());
+      if (isMacro) {
+        var m = line.match(/^([^:\-\d]+)[:\-]?\s*(.+)$/);
+        if (m) {
+          html += '<div class="macro-row"><span class="macro-label">'+m[1].trim()+'</span><span class="macro-val">'+m[2].trim()+'</span></div>';
+        }
+      } else if (isTip) {
+        var tipText = line.replace(/^совет[:\s]*/i,'').trim();
+        if (tipText.length > 3) tips.push(tipText);
+      }
+    });
+    html += '</div>';
+    if (tips.length) {
+      html += '<div class="tips-block"><div class="tips-title">Рекомендации по питанию</div>';
+      tips.forEach(function(tip, ti) {
+        html += '<div class="nutr-tip"><span class="nutr-tip-num">'+(ti+1)+'</span><span class="nutr-tip-text">'+tip+'</span></div>';
+      });
+      html += '</div>';
+    }
+    return html;
+  }
+    if (key === 'ПРОГРЕСС') {
+    var html = '';
+    var months = [];
+    var cur = null;
+    lines.forEach(function(line) {
+      // Ловим маркеры: "1 МЕСЯЦ:", "3 МЕСЯЦА:", "6 МЕСЯЦЕВ:", "1 месяц:" и т.д.
+      var m = line.match(/^(\d+\s*(?:месяц|месяца|месяцев))[:\s]+(.+)/i);
+      if (m) {
+        if (cur) months.push(cur);
+        cur = { label: m[1].trim(), text: m[2].trim() };
+      } else if (cur && line.length > 2) {
+        cur.text += ' ' + line;
+      }
+    });
+    if (cur) months.push(cur);
+    var icons = ['📅','📆','🗓️'];
+    months.forEach(function(m, i) {
+      html += '<div class="progress-month"><div class="pm-label">'+icons[i%3]+' '+m.label+'</div><div class="pm-text">'+m.text+'</div></div>';
+    });
+    if (!months.length) {
+      html += lines.map(function(l){return '<div class="tip-row">'+l+'</div>';}).join('');
+    }
+    return html;
+  }
+    if (key === 'ПРОГРЕССИЯ') {
+    var html = '';
+    var steps = [];
+    var cur = null;
+    lines.forEach(function(line) {
+      var m = line.match(/^ШАГ[:\s]+(.+)/i);
+      if (m) steps.push(m[1].trim());
+    });
+    if (!steps.length) return lines.map(function(l){return '<div class="tip-row">'+l+'</div>';}).join('');
+    var stepLabels = ['Недели 1–4','Недели 5–8','Недели 9–12','После 3 месяцев'];
+    steps.forEach(function(s, i) {
+      html += '<div class="prog-step">'
+        +'<div class="prog-step-num">'+(i+1)+'</div>'
+        +'<div class="prog-step-body">'
+          +'<div class="prog-step-label">'+(stepLabels[i]||'Этап '+(i+1))+'</div>'
+          +'<div class="prog-step-text">'+s+'</div>'
+        +'</div>'
+        +'</div>';
+    });
+    return html;
+  }
+
+  if (key === 'РАЗГРУЗКА') {
+    var keys = {
+      'КОГДА': {icon:'📅', label:'Когда делать'},
+      'КАК':   {icon:'💡', label:'Как выглядит'},
+      'ПРИЗНАКИ': {icon:'⚠️', label:'Признаки усталости'}
+    };
+    var html = '';
+    lines.forEach(function(line) {
+      var matched = false;
+      Object.keys(keys).forEach(function(k) {
+        var m = line.match(new RegExp('^'+k+'[:\s]+(.+)', 'i'));
+        if (m) {
+          matched = true;
+          html += '<div class="deload-row">'
+            +'<div class="deload-icon">'+keys[k].icon+'</div>'
+            +'<div class="deload-body">'
+              +'<div class="deload-label">'+keys[k].label+'</div>'
+              +'<div class="deload-text">'+m[1].trim()+'</div>'
+            +'</div>'
+            +'</div>';
+        }
+      });
+      if (!matched && line.length > 3) {
+        html += '<div class="tip-row">'+line+'</div>';
+      }
+    });
+    return html || lines.map(function(l){return '<div class="tip-row">'+l+'</div>';}).join('');
+  }
+
+  if (key === 'СМЕНА_ПРОГРАММЫ') {
+    var changeKeys = {
+      'ПЕРИОД': {icon:'📆', label:'Периодичность'},
+      'ЧТО_МЕНЯТЬ': {icon:'🔧', label:'Что менять'},
+      'ПРИМЕР': {icon:'✅', label:'Пример'}
+    };
+    var html = '';
+    lines.forEach(function(line) {
+      var matched = false;
+      Object.keys(changeKeys).forEach(function(k) {
+        var m = line.match(new RegExp('^'+k+'[:\s]+(.+)', 'i'));
+        if (m) {
+          matched = true;
+          html += '<div class="deload-row">'
+            +'<div class="deload-icon">'+changeKeys[k].icon+'</div>'
+            +'<div class="deload-body">'
+              +'<div class="deload-label">'+changeKeys[k].label+'</div>'
+              +'<div class="deload-text">'+m[1].trim()+'</div>'
+            +'</div>'
+            +'</div>';
+        }
+      });
+      if (!matched && line.length > 3) {
+        html += '<div class="tip-row">'+line+'</div>';
+      }
+    });
+    return html || lines.map(function(l){return '<div class="tip-row">'+l+'</div>';}).join('');
+  }
+
+    if (key === 'ГЛАВНОЕ_ПРАВИЛО') {
+    return '<div class="main-rule">'+lines.join(' ')+'</div>';
+  }
+
+  return lines.map(function(l){return '<div class="tip-row">'+l+'</div>';}).join('');
+}
+
+function showResult() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('result-screen').style.display = 'block';
+  var a = answers;
+  var name = a.name || 'Пользователь';
+  var goalLabels = {fat_loss:'Жиросжигание',muscle_gain:'Набор массы',recomp:'Рельеф',endurance:'Выносливость',general:'Общая форма'};
+  document.getElementById('res-name').textContent = name+', твой план готов!';
+  var statsHTML = [
+    {val:a.weight+' кг',lbl:'Сейчас'},
+    {val:(a.target_weight||'—')+(a.target_weight?' кг':''),lbl:'Цель'},
+    {val:a.days+' дн',lbl:'в неделю'},
+    {val:goalLabels[a.goal]||a.goal,lbl:'Направление'}
+  ].map(function(s){return '<div class="result-stat"><div class="rs-val">'+s.val+'</div><div class="rs-lbl">'+s.lbl+'</div></div>';}).join('');
+  document.getElementById('res-stats').innerHTML = statsHTML;
+
+  var p = generatedPlan || {};
+  var cards = [
+    {key:'АНАЛИЗ',icon:'🔍',title:'Анализ твоей ситуации'},
+    {key:'ПРОГРАММА',icon:'💪',title:'Программа тренировок'},
+    {key:'ПИТАНИЕ',icon:'🍽️',title:'План питания'},
+    {key:'СОН_И_ВОССТАНОВЛЕНИЕ',icon:'😴',title:'Сон и восстановление'},
+    {key:'ПРОГРЕСС',icon:'📈',title:'Прогресс по месяцам'},
+    {key:'ГЛАВНОЕ_ПРАВИЛО',icon:'🎯',title:'Главное правило для тебя'},
+    {key:'ПРОГРЕССИЯ',icon:'⬆️',title:'Как наращивать нагрузку'},
+    {key:'РАЗГРУЗКА',icon:'🔄',title:'Разгрузочные недели'},
+    {key:'СМЕНА_ПРОГРАММЫ',icon:'🔀',title:'Когда менять программу'}
+  ];
+  document.getElementById('result-cards').innerHTML = cards.map(function(c) {
+    if (!p[c.key]) return '';
+    return '<div class="result-card"><div class="rc-title">'+c.icon+' '+c.title+'</div><div class="rc-content">'+formatSection(c.key,p[c.key])+'</div></div>';
+  }).join('');
+  window.scrollTo(0,0);
+}
+
+function downloadTracker() {
+  var a = answers;
+  var p = generatedPlan || {};
+  var name = a.name || 'Пользователь';
+  var prog = (p['ПРОГРАММА']||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  var pit = (p['ПИТАНИЕ']||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  var rule = (p['ГЛАВНОЕ_ПРАВИЛО']||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  var sk = 'tr_'+name.replace(/[^a-zа-яё0-9]/gi,'_').toLowerCase();
+
+  var t = '<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">'
+    +'<meta name="viewport" content="width=device-width,initial-scale=1">'
+    +'<title>Трекер — '+name+'</title>'
+    +'<style>@import url(\'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap\');'
+    +':root{--bg:#f5ede3;--surface:#fffaf5;--s2:#f0e6d8;--border:#d9c4ae;--amber:#d97706;--green:#059669;--text:#2c1f14;--t3:#9c7a62;}'
+    +'*{box-sizing:border-box;margin:0;padding:0;}'
+    +'body{background:var(--bg);color:var(--text);font-family:\'Inter\',sans-serif;max-width:680px;margin:0 auto;padding:24px 16px 60px;}'
+    +'h1{font-size:24px;font-weight:900;color:var(--amber);margin-bottom:4px;}'
+    +'.sub{font-size:13px;color:var(--t3);margin-bottom:24px;}'
+    +'.card{background:var(--surface);border-radius:14px;padding:20px;margin-bottom:14px;border:1px solid var(--border);}'
+    +'.ct{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;}'
+    +'.pt{font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.7;}'
+    +'.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}'
+    +'label{font-size:12px;color:var(--t3);display:block;margin-bottom:4px;font-weight:600;}'
+    +'input{width:100%;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit;color:var(--text);outline:none;}'
+    +'input:focus{border-color:var(--amber);}'
+    +'.btn{background:var(--amber);color:#fff;border:none;border-radius:8px;padding:12px 20px;font-weight:800;font-size:14px;cursor:pointer;width:100%;font-family:inherit;margin-top:12px;}'
+    +'.entry{background:var(--s2);border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:13px;border:1px solid var(--border);}'
+    +'.edate{font-weight:700;color:var(--amber);margin-bottom:3px;}'
+    +'</style></head><body>'
+    +'<h1>Тренировка с целью</h1>'
+    +'<div class="sub">Трекер — '+name+' · Цель: '+(a.target_weight ? a.target_weight+' кг' : 'улучшить форму')+'</div>'
+    +'<div class="card"><div class="ct">💪 Программа тренировок</div><div class="pt">'+prog+'</div></div>'
+    +'<div class="card"><div class="ct">🍽️ План питания</div><div class="pt">'+pit+'</div></div>'
+    +'<div class="card"><div class="ct">🎯 Главное правило</div><div class="pt">'+rule+'</div></div>'
+    +'<div class="card"><div class="ct">📝 Запись дня</div>'
+    +'<div class="grid">'
+    +'<div><label>Дата</label><input type="date" id="ld" value="'+new Date().toISOString().split('T')[0]+'"></div>'
+    +'<div><label>Вес (кг)</label><input type="number" id="lw" step="0.1" placeholder="'+a.weight+'"></div>'
+    +'<div><label>Калории (ккал)</label><input type="number" id="lc" placeholder="2400"></div>'
+    +'<div><label>Сон (ч)</label><input type="number" id="ls" step="0.25" placeholder="7.5"></div>'
+    +'<div><label>Шаги</label><input type="number" id="lp" placeholder="8000"></div>'
+    +'<div><label>Тренировка</label><input type="text" id="lt" placeholder="Силовая / Бассейн"></div>'
+    +'</div>'
+    +'<button class="btn" onclick="sv()">💾 Сохранить</button>'
+    +'<div id="ll" style="margin-top:14px"></div></div>'
+    +'<scr'+'ipt>'
+    +'var SK="'+sk+'";'
+    +'function gl(){try{return JSON.parse(localStorage.getItem(SK)||"[]");}catch{return[];}} '
+    +'function sl(d){try{localStorage.setItem(SK,JSON.stringify(d));}catch{}} '
+    +'function sv(){'
+    +'var e={date:document.getElementById("ld").value,w:document.getElementById("lw").value,'
+    +'c:document.getElementById("lc").value,s:document.getElementById("ls").value,'
+    +'p:document.getElementById("lp").value,t:document.getElementById("lt").value};'
+    +'var logs=gl().filter(function(l){return l.date!==e.date;});'
+    +'logs.push(e);logs.sort(function(a,b){return b.date.localeCompare(a.date);});'
+    +'sl(logs);rl();} '
+    +'function rl(){'
+    +'document.getElementById("ll").innerHTML=gl().slice(0,30).map(function(l){'
+    +'var d=[l.w&&"⚖️ "+l.w+" кг",l.c&&"🍽️ "+l.c+" ккал",l.s&&"😴 "+l.s+" ч",l.p&&"👟 "+l.p,l.t&&"💪 "+l.t].filter(Boolean).join(" · ");'
+    +'return "<div class=entry><div class=edate>"+l.date+"</div>"+d+"</div>";}).join("");} '
+    +'rl();'
+    +'<\/scr'+'ipt>'
+    +'</body></html>';
+
+  var blob = new Blob([t], {type:'text/html;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a2 = document.createElement('a');
+  a2.href = url; a2.download = 'трекер-'+name.toLowerCase()+'.html'; a2.click();
+  URL.revokeObjectURL(url);
+}
+// Автозапуск опроса при загрузке
+window.addEventListener('load', function() {
+  startQuiz();
+});
+</script>
+</body>
+</html>
